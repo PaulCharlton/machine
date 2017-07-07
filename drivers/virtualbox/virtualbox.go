@@ -24,6 +24,7 @@ const (
 	defaultCPU                 = 1
 	defaultMemory              = 1024
 	defaultBoot2DockerURL      = ""
+	defaultConfigDriveURL      = ""
 	defaultBoot2DockerImportVM = ""
 	defaultHostOnlyCIDR        = "192.168.99.1/24"
 	defaultHostOnlyNictype     = "82540EM"
@@ -59,6 +60,7 @@ type Driver struct {
 	DiskSize            int
 	NatNicType          string
 	Boot2DockerURL      string
+	ConfigDriveURL      string
 	Boot2DockerImportVM string
 	HostDNSResolver     bool
 	HostOnlyCIDR        string
@@ -129,6 +131,12 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage:  "The URL of the boot2docker image. Defaults to the latest available version",
 			Value:  defaultBoot2DockerURL,
 			EnvVar: "VIRTUALBOX_BOOT2DOCKER_URL",
+		},
+		mcnflag.StringFlag{
+			Name:   "virtualbox-configdrive-url",
+			Usage:  "The URL for cloud-init image",
+			Value:  defaultConfigDriveURL,
+			EnvVar: "VIRTUALBOX_CONFIGDRIVE_URL",
 		},
 		mcnflag.StringFlag{
 			Name:   "virtualbox-import-boot2docker-vm",
@@ -232,6 +240,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.Memory = flags.Int("virtualbox-memory")
 	d.DiskSize = flags.Int("virtualbox-disk-size")
 	d.Boot2DockerURL = flags.String("virtualbox-boot2docker-url")
+	d.ConfigDriveURL = flags.String("virtualbox-configdrive-url")
 	d.SetSwarmConfigFromFlags(flags)
 	d.SSHUser = "docker"
 	d.Boot2DockerImportVM = flags.String("virtualbox-import-boot2docker-vm")
@@ -279,6 +288,15 @@ func (d *Driver) PreCreateCheck() error {
 		return err
 	}
 
+	// Downloading cloud-init to cache should be done here to make sure
+	// that a download failure will not leave a machine half created.
+	if d.ConfigDriveURL != "" {
+		# optional cloud-config drive
+		if err := d.b2dUpdater.UpdateISOCache(d.StorePath, d.ConfigDriveURL); err != nil {
+			return err
+		}
+	}
+
 	// Check that Host-only interfaces are ok
 	if _, err = listHostOnlyAdapters(d.VBoxManager); err != nil {
 		return err
@@ -299,6 +317,13 @@ func (d *Driver) Create() error {
 func (d *Driver) CreateVM() error {
 	if err := d.b2dUpdater.CopyIsoToMachineDir(d.StorePath, d.MachineName, d.Boot2DockerURL); err != nil {
 		return err
+	}
+
+	if d.ConfigDriveURL != "" {
+		# optional cloud-config drive
+		if err := d.b2dUpdater.CopyIsoToMachineDir(d.StorePath, d.MachineName, d.ConfigDriveURL); err != nil {
+			return err
+		}
 	}
 
 	log.Info("Creating VirtualBox VM...")
@@ -442,6 +467,16 @@ func (d *Driver) CreateVM() error {
 		return err
 	}
 
+	if d.ConfigDriveURL != "" {
+		if err := d.vbm("storageattach", d.MachineName,
+		"--storagectl", "SATA",
+		"--port", "2",
+		"--device", "0",
+		"--type", "dvddrive",
+		"--medium", d.ResolveStorePath("cloud-config.iso")); err != nil {
+			return err
+		}
+	}
 	// let VBoxService do nice magic automounting (when it's used)
 	if err := d.vbm("guestproperty", "set", d.MachineName, "/VirtualBox/GuestAdd/SharedFolders/MountPrefix", "/"); err != nil {
 		return err

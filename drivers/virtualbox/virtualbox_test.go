@@ -502,6 +502,7 @@ func mockCalls(t *testing.T, driver *Driver, expectedCalls []Call) {
 	}
 
 	driver.Boot2DockerURL = "http://b2d.org"
+	driver.ConfigFileURL = "http://b2d.org/cloud-config"
 	driver.VBoxManager = mockOperations
 	driver.b2dUpdater = mockOperations
 	driver.sshKeyGenerator = mockOperations
@@ -524,6 +525,7 @@ func TestCreateVM(t *testing.T) {
 	driver := NewDriver("default", "path")
 	mockCalls(t, driver, []Call{
 		{"CopyIsoToMachineDir path default http://b2d.org", "", nil},
+		{"CopyIsoToMachineDir path default http://b2d.org/cloud-config", "", nil},
 		{"Generate path/machines/default/id_rsa", "", nil},
 		{"Create 20000 path/machines/default/id_rsa.pub path/machines/default/disk.vmdk", "", nil},
 		{"vbm createvm --basefolder path/machines/default --name default --register", "", nil},
@@ -532,6 +534,7 @@ func TestCreateVM(t *testing.T) {
 		{"vbm storagectl default --name SATA --add sata --hostiocache on", "", nil},
 		{"vbm storageattach default --storagectl SATA --port 0 --device 0 --type dvddrive --medium path/machines/default/boot2docker.iso", "", nil},
 		{"vbm storageattach default --storagectl SATA --port 1 --device 0 --type hdd --medium path/machines/default/disk.vmdk", "", nil},
+		{"vbm storageattach default --storagectl SATA --port 2 --device 0 --type dvddrive --medium path/machines/default/cloud-config.iso", "", nil},
 		{"vbm guestproperty set default /VirtualBox/GuestAdd/SharedFolders/MountPrefix /", "", nil},
 		{"vbm guestproperty set default /VirtualBox/GuestAdd/SharedFolders/MountDir /", "", nil},
 		{"vbm sharedfolder add default --name " + shareName + " --hostpath " + shareDir + " --automount", "", nil},
@@ -555,6 +558,7 @@ func TestCreateVMWithSpecificNatNicType(t *testing.T) {
 	driver.NatNicType = "Am79C973"
 	mockCalls(t, driver, []Call{
 		{"CopyIsoToMachineDir path default http://b2d.org", "", nil},
+		{"CopyIsoToMachineDir path default http://b2d.org/cloud-config", "", nil},
 		{"Generate path/machines/default/id_rsa", "", nil},
 		{"Create 20000 path/machines/default/id_rsa.pub path/machines/default/disk.vmdk", "", nil},
 		{"vbm createvm --basefolder path/machines/default --name default --register", "", nil},
@@ -563,6 +567,7 @@ func TestCreateVMWithSpecificNatNicType(t *testing.T) {
 		{"vbm storagectl default --name SATA --add sata --hostiocache on", "", nil},
 		{"vbm storageattach default --storagectl SATA --port 0 --device 0 --type dvddrive --medium path/machines/default/boot2docker.iso", "", nil},
 		{"vbm storageattach default --storagectl SATA --port 1 --device 0 --type hdd --medium path/machines/default/disk.vmdk", "", nil},
+		{"vbm storageattach default --storagectl SATA --port 2 --device 0 --type dvddrive --medium path/machines/default/cloud-config.iso", "", nil},
 		{"vbm guestproperty set default /VirtualBox/GuestAdd/SharedFolders/MountPrefix /", "", nil},
 		{"vbm guestproperty set default /VirtualBox/GuestAdd/SharedFolders/MountDir /", "", nil},
 		{"vbm sharedfolder add default --name " + shareName + " --hostpath " + shareDir + " --automount", "", nil},

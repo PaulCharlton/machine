@@ -186,6 +186,10 @@ func (m *mockReleaseGetter) filename() string {
 	return defaultISOFilename
 }
 
+func (m *mockReleaseGetter) configFileName() string {
+	return defaultConfigFilename
+}
+
 func (m *mockReleaseGetter) getReleaseTag(apiURL string) (string, error) {
 	return m.ver, m.apiErr
 }

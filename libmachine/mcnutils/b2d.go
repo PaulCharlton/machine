@@ -23,6 +23,7 @@ import (
 const (
 	defaultURL            = "https://api.github.com/repos/boot2docker/boot2docker/releases"
 	defaultISOFilename    = "boot2docker.iso"
+	defaultConfigFilename = "cloud-config.iso"
 	defaultVolumeIDOffset = int64(0x8028)
 	versionPrefix         = "-v"
 	defaultVolumeIDLength = 32
@@ -332,6 +333,7 @@ func removeFileIfExists(name string) error {
 type B2dUtils struct {
 	releaseGetter
 	iso
+	cloudConfig
 	storePath    string
 	imgCachePath string
 }
@@ -343,6 +345,11 @@ func NewB2dUtils(storePath string) *B2dUtils {
 		releaseGetter: &b2dReleaseGetter{isoFilename: defaultISOFilename},
 		iso: &b2dISO{
 			commonIsoPath:  filepath.Join(imgCachePath, defaultISOFilename),
+			volumeIDOffset: defaultVolumeIDOffset,
+			volumeIDLength: defaultVolumeIDLength,
+		},
+		cloudConfig: &b2dISO{
+			commonIsoPath:  filepath.Join(imgCachePath, defaultConfigFilename),
 			volumeIDOffset: defaultVolumeIDOffset,
 			volumeIDLength: defaultVolumeIDLength,
 		},
